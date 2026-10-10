@@ -1,0 +1,8 @@
+# Зависимости, артефакты сборки и локальные секреты не форматируются.
+**/node_modules/
+**/dist/
+**/package-lock.json
+**/*.tsbuildinfo
+.env
+.secrets/
+.cache/

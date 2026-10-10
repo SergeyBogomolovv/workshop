@@ -1,0 +1,23 @@
+# Дополнительные тесты используют запущенную БД и удаляют только созданные ими записи.
+services:
+  tests:
+    image: golang:1.26.1-alpine
+    profiles: [test]
+    working_dir: /src
+    volumes:
+      - ./backend:/src:ro
+      - test_go_cache:/go
+      - test_build_cache:/root/.cache/go-build
+    environment:
+      TEST_DATABASE: "1"
+      DB_HOST: postgres
+      DB_NAME: ${POSTGRES_DB}
+      DB_PASSWORD: ${DB_USER_PASSWORD}
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD}
+      DATA_KEY: ${DATA_KEY}
+      LOGIN_KEY: ${LOGIN_KEY}
+      APP_ORIGIN: ${APP_ORIGIN}
+    entrypoint: [go, test, -count=1, -v, ./...]
+volumes:
+  test_go_cache:
+  test_build_cache:

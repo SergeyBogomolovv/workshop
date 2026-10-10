@@ -1,0 +1,8 @@
+# Секреты, зависимости и данные репозитория исключены из контекста сборки Docker.
+.git
+.env
+.secrets
+.cache
+**/node_modules
+**/dist
+**/test-results

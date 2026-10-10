@@ -1,0 +1,69 @@
+# Локальное приложение с отдельными ролями БД для инициализации, миграций и работы API.
+name: workshop
+services:
+  postgres:
+    build: ./infra/postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_USER_PASSWORD: ${DB_USER_PASSWORD:?Set DB_USER_PASSWORD in .env}
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:?Set DB_ADMIN_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U bootstrap -d "$${POSTGRES_DB}"']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+  migrate:
+    image: postgres:18.3-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: admin
+      PGPASSWORD: ${DB_ADMIN_PASSWORD}
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    entrypoint:
+      [sh, -c, "psql -v ON_ERROR_STOP=1 -f /migrations/001_initial.sql"]
+  api:
+    build: ./backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DB_HOST: postgres
+      DB_NAME: ${POSTGRES_DB}
+      DB_PASSWORD: ${DB_USER_PASSWORD}
+      DATA_KEY: ${DATA_KEY}
+      LOGIN_KEY: ${LOGIN_KEY}
+      APP_ORIGIN: ${APP_ORIGIN}
+      LOGIN_IP_LIMIT: ${LOGIN_IP_LIMIT:-30}
+      LOGIN_ACCOUNT_LIMIT: ${LOGIN_ACCOUNT_LIMIT:-10}
+      REGISTER_IP_LIMIT: ${REGISTER_IP_LIMIT:-10}
+    healthcheck:
+      test:
+        [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:8080/api/v1/catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: infra/proxy/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8088:80"
+    restart: unless-stopped
+volumes:
+  postgres_data:

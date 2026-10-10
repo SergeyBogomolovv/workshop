@@ -1,0 +1,12 @@
+# Локальные секреты, результаты сборки и кэши разработки.
+.env
+.secrets/
+.cache/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+backend/bin/
+*.tsbuildinfo
